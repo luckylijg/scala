@@ -9,6 +9,7 @@ cache:
     - $HOME/.ivy2/cache
     - $HOME/.sbt
     - build/
+    - target/
 
 
 before_script:
@@ -37,6 +38,7 @@ jobs:
         # (also, we couldn't even, because the password to publish to artifactory is not there :-/)
         if: type != pull_request
         script:
+          - rm -rf build/ target/ # delete cache from previous run
           - source scripts/common
           - source scripts/bootstrap_fun
           - determineScalaVersion
@@ -45,7 +47,7 @@ jobs:
           - clearIvyCache
           - if [ ! -z "$STARR_REF" ]; then buildStarr; fi
           - buildLocker
-          - rm -rf build/ # ensure we resolve from artifactory
+          - rm -rf build/ target/ # ensure we resolve from artifactory
           - buildModules
           - buildQuick clean publish
           - set | grep -E '^updatedModuleVersions=|^SCALA_VER=|^publishToSonatype=' > build/env
@@ -83,6 +85,8 @@ jobs:
           - if [ -z "$SCALA_VER" ]; then echo "Environment not propagated. Caching issue?"; cat build/env ; exit 1; fi
           - source scripts/common
           - source scripts/bootstrap_fun
+          - scripts/set-last-modified
+          - sbt setupPublishCore publishLocal
           - if [ "$publishToSonatype" = "yes" ]; then publishSonatype; fi
           - triggerScalaDist
         # using bash conditional, because a travis condition on the stage won't work:
